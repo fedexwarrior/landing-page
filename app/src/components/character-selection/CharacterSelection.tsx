@@ -3,7 +3,7 @@ import { VELV_CHARACTERS, VelvCharacter } from '@/config/characters';
 import { ChevronRight, Lock, Sparkles, Star, Crown, Eye, Heart } from 'lucide-react';
 import { clsx } from 'clsx';
 
-interface CharacterCardProps {
+export interface CharacterCardProps {
   character: VelvCharacter;
   onSelect: (character: VelvCharacter) => void;
   isSelected?: boolean;
