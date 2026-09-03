@@ -12,9 +12,9 @@ interface CreditPackage { id: string; credits: number; price: number; name: stri
 
 const CREDIT_PACKAGES: Record<string, CreditPackage> = { starter: { id: 'starter', credits: 50, price: 500, name: 'Starter Pack', priceFormatted: '$5' }, popular: { id: 'popular', credits: 120, price: 1000, name: 'Popular Pack', priceFormatted: '$10' }, value: { id: 'value', credits: 300, price: 2000, name: 'Best Value Pack', priceFormatted: '$20' }, premium: { id: 'premium', credits: 800, price: 5000, name: 'Premium Pack', priceFormatted: '$50' }, };
 
-app.get('/api/health', (_req: Request, res: Response) => { res.json({ status: 'ok' }); });
+app.get(['/api/health','/health'], (_req: Request, res: Response) => { res.json({ status: 'ok' }); });
 
-app.post('/api/create-checkout-session', async (req: Request, res: Response) => { try { const { packageId, userId, successUrl, cancelUrl } = req.body; const pkg = CREDIT_PACKAGES[packageId];
+app.post(['/api/create-checkout-session', '/create-checkout-session'],async (req: Request, res: Response) => { try { const { packageId, userId, successUrl, cancelUrl } = req.body; const pkg = CREDIT_PACKAGES[packageId];
 
 if (!pkg) {
   res.status(400).json({ error: 'Invalid package selected' });
