@@ -1,1 +1,2 @@
 { "rewrites": [ { "source": "/api/(.*)", "destination": "/api" }, { "source": "/(.*)", "destination": "/app/$1" } ], "functions": { "api/index.ts": { "memory": 1024, "maxDuration": 10 } } }
+ 
