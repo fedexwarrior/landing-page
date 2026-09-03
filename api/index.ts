@@ -61,10 +61,15 @@ app.post('/api/chat', async (req, res) => {
   };
 
   try {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      console.error('CRITICAL: OPENROUTER_API_KEY environment variable is missing.');
+    }
+
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -75,10 +80,16 @@ app.post('/api/chat', async (req, res) => {
     });
 
     const data = await response.json();
+
+    // Log the full response object to Vercel logs if an error occurred
+    if (!response.ok || data.error) {
+      console.error('OpenRouter API Response Error:', JSON.stringify(data, null, 2));
+    }
+
     const reply = data.choices?.[0]?.message?.content || "Sorry, I lost my train of thought!";
     res.json({ reply });
   } catch (error) {
-    console.error('Chat API error:', error);
+    console.error('Chat API unexpected error:', error);
     res.status(500).json({ error: 'Failed to generate response' });
   }
 });
