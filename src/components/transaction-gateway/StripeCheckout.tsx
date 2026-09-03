@@ -10,7 +10,7 @@ export const StripeCheckout: React.FC = () => {
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId: 'starter'})
+        body: JSON.stringify({ packageId: 'pro'})
       });
 
       const session = await response.json();
