@@ -1,4 +1,4 @@
-import { StripeCheckout } from '/components/transaction-gateway/StripeCheckout';
+import { StripeCheckout } from './components/transaction-gateway/StripeCheckout';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ChatInterface from './components/chat-interface/ChatInterface';
 import { useState } from 'react';
@@ -84,7 +84,7 @@ function MainApp() {
             <p className="text-zinc-400 mb-6">Choose a package to continue chatting</p>
             <StripeCheckout />
 
-            
+        
             </div>
 
             {isLoadingCheckout && (
@@ -98,7 +98,7 @@ function MainApp() {
               Secure payment powered by Stripe
             </p>
           </div>
-        </div>
+      
       )}
     </div>
   );
