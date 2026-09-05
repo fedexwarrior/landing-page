@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crown, Shield } from 'lucide-react';
+import { Crown, Shield, Send } from 'lucide-react';
 
 interface ChatInterfaceProps {
   character: any;
@@ -11,6 +11,7 @@ interface ChatInterfaceProps {
 
 export default function ChatInterface({ character, onBack, consumeCredit, credits }: ChatInterfaceProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [inputMessage, setInputMessage] = useState('');
 
   return (
     <div className="relative flex flex-col h-full w-full bg-zinc-950 text-white">
@@ -26,9 +27,7 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
             <button 
               onClick={async () => { 
                 try { 
-                  const targetUrl = '/create-checkout-session'; 
-                  console.log("Hitting URL:", targetUrl); 
-                  const r = await fetch(targetUrl, { 
+                  const r = await fetch('https://velvetcrush.app/create-checkout-session', { 
                     method: 'POST', 
                     headers: {'Content-Type': 'application/json'}, 
                     body: JSON.stringify({ packageId: 'pro' }) 
@@ -83,6 +82,20 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
         <div className="bg-zinc-900 p-3 rounded-2xl max-w-[80%] text-sm">
           Hey there! Let's get closer. What's on your mind?
         </div>
+      </div>
+
+      {/* Input Bar Footer */}
+      <div className="p-3 border-t border-zinc-800 bg-zinc-900/50 flex items-center gap-2">
+        <input
+          type="text"
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          placeholder="Type a message..."
+          className="flex-1 bg-zinc-800 text-white px-4 py-2 rounded-full focus:outline-none text-sm"
+        />
+        <button className="p-2 bg-amber-500 text-zinc-950 rounded-full hover:bg-amber-400 transition-colors">
+          <Send className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
