@@ -26,7 +26,7 @@ const CREDIT_PACKAGES = [
 ];
 
 // Create checkout session
-app.post('/api/create-checkout-session', async (req, res) => {
+app.post(['/api/create-checkout-session', '/api/create-checkout-session'], async (req, res) => {
   try {
     const { packageId, userId, successUrl, cancelUrl } = req.body;
 
@@ -104,5 +104,14 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
-
+// AI Chat Route
+app.post(['/chat', '/api/chat'], async (req, res) => {
+  try {
+    const { message } = req.body;
+    res.json({ message: "Hello! How can I help you?" });
+  } catch (error) {
+    const err = error as Error;
+    res.status(500).json({ error: err.message });
+  }
+  });
 export default app;
