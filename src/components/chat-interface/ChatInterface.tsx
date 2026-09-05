@@ -99,11 +99,11 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
 
       const data = await response.json();
 
-      if (data.reply) {
+      if (data.message) {
         const aiMsg: Message = {
           id: `ai-${Date.now()}`,
           sender: 'ai',
-          text: data.reply,
+          text: data.message,
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, aiMsg]);
@@ -213,7 +213,7 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             className="fixed top-16 right-4 z-50 glass-strong rounded-2xl border-gold/30 shadow-[0_0_40px_rgba(0,0,0,0.5)] py-2 w-56"
           >
-            <button className="w-full px-4 py-2 text-left text-zinc-300 hover:text-white hover:bg-glass-medium transition flex items-center gap-3">
+  <button onClick={async () => { setShowMenu(false); const res = await fetch ('/api/create-checkout-session', { method: 'POST' }); const data = await res.json(); if (data.url) window.location.href=data.url; }} className="w-full px-4 py-2 text-left text-zinc-300 hover:text-white flex items-center gap-2">
               <Crown className="w-5 h-5 text-gold" />
               Premium Features
             </button>
