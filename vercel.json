@@ -3,7 +3,7 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.ts" },
+    { "source": "/api/(.*)", "destination": "/app/server/index.ts" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
