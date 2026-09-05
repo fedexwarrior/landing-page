@@ -213,7 +213,7 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             className="fixed top-16 right-4 z-50 glass-strong rounded-2xl border-gold/30 shadow-[0_0_40px_rgba(0,0,0,0.5)] py-2 w-56"
           >
-  <button onClick={async () => { setShowMenu(false); const res = await fetch ('/api/create-checkout-session', { method: 'POST' }); const data = await res.json(); if (data.url) window.location.href=data.url; }} className="w-full px-4 py-2 text-left text-zinc-300 hover:text-white flex items-center gap-2">
+  <button onClick={async () => { setShowMenu(false); const r = await fetch('create-checkout-session', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ packageId: 'pro' }) }); const d = await r.json(); if (d.url) window.location.href = d.url; }}>
               <Crown className="w-5 h-5 text-gold" />
               Premium Features
             </button>
