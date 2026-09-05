@@ -13,6 +13,12 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
   const [showMenu, setShowMenu] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
 
+  const handleSendMessage = () => {
+    if (!inputMessage.trim()) return;
+    // Add your send message logic here
+    setInputMessage('');
+  };
+
   return (
     <div className="relative flex flex-col h-full w-full bg-zinc-950 text-white">
       {/* Menu Dropdown */}
@@ -93,7 +99,10 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
           placeholder="Type a message..."
           className="flex-1 bg-zinc-800 text-white px-4 py-2 rounded-full focus:outline-none text-sm"
         />
-        <button className="p-2 bg-amber-500 text-zinc-950 rounded-full hover:bg-amber-400 transition-colors">
+        <button 
+          onClick={handleSendMessage}
+          className="p-2 bg-amber-500 text-zinc-950 rounded-full hover:bg-amber-400 transition-colors cursor-pointer"
+        >
           <Send className="w-4 h-4" />
         </button>
       </div>
