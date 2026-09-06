@@ -16,31 +16,47 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
     { sender: 'character', text: "Hey there! Let's get closer. What's on your mind?" }
   ]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim()) return;
 
-    // Add user message to chat stream
-    setMessages((prev) => [...prev, { sender: 'user', text: inputMessage }]);
+    const userText = inputMessage;
+    setMessages((prev) => [...prev, { sender: 'user', text: userText }]);
     setInputMessage('');
+
+    try {
+      const response = await fetch('https://velvetcrush.app/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userText, characterId: character?.id }),
+      });
+
+      const data = await response.json();
+      if (data.reply) {
+        setMessages((prev) => [...prev, { sender: 'character', text: data.reply }]);
+      } else {
+        setMessages((prev) => [...prev, { sender: 'character', text: "..." }]);
+      }
+    } catch (err) {
+      console.error('Failed to get response', err);
+    }
   };
 
   const handleCheckout = async () => {
     try {
-      const response = await fetch('/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId: 'pro' }),
-      });
-
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert('Checkout Error: ' + JSON.stringify(data));
-      }
-    } catch (err: any) {
-      alert('Fetch failed: ' + (err.message || 'Load failed'));
+      const res = await fetch("https://velvetcrush.app/create-checkout-session", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ packageId: "pro" }) 
+      }); 
+      const data = await res.json(); 
+      if (data.url) { 
+        window.location.href = data.url; 
+      } else { 
+        alert("Error: " + JSON.stringify(data)); 
+      } 
+    } catch (err: any) { 
+      alert("Fetch failed: " + err.message); 
     }
   };
 
@@ -56,7 +72,7 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
             className="fixed top-16 right-4 z-50 glass-strong rounded-2xl border border-glass-border shadow-2xl p-2 w-56 bg-zinc-900/90 backdrop-blur-md"
           >
             <button 
-              onClick={handleCheckout}
+              onClick={handleCheckout} 
               className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-zinc-800 transition-colors rounded-xl text-amber-400 cursor-pointer"
             >
               <Crown className="w-5 h-5 text-amber-400" />
