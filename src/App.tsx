@@ -142,6 +142,7 @@ function MainApp() {
               consumeCredit={consumeCredit}
               credits={userCredits}
               onBack={handleBackToHero}
+              onUpgradeClick={() => setShowTopUpModal(true)}
             />
           </motion.div>
         )}

@@ -7,9 +7,10 @@ interface ChatInterfaceProps {
   onBack: () => void;
   consumeCredit: () => boolean;
   credits: number;
+  onUpgradeClick: () => void;
 }
 
-export default function ChatInterface({ character, onBack, consumeCredit, credits }: ChatInterfaceProps) {
+export default function ChatInterface({ character, onBack, consumeCredit, credits, onUpgradeClick }: ChatInterfaceProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [messages, setMessages] = useState([
@@ -42,24 +43,6 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
     }
   };
 
-  const handleCheckout = async () => {
-    try {
-      const res = await fetch("/api/create-checkout-session", { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ packageId: "pro" }) 
-      }); 
-      const data = await res.json(); 
-      if (data.url) { 
-        window.location.href = data.url; 
-      } else { 
-        alert("Error: " + JSON.stringify(data)); 
-      } 
-    } catch (err: any) { 
-      alert("Fetch failed: " + err.message); 
-    }
-  };
-
   return (
     <div className="relative flex flex-col h-full w-full bg-zinc-950 text-white">
       {/* Menu Dropdown */}
@@ -72,7 +55,7 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
             className="fixed top-16 right-4 z-50 glass-strong rounded-2xl border border-glass-border shadow-2xl p-2 w-56 bg-zinc-900/90 backdrop-blur-md"
           >
             <button 
-              onClick={handleCheckout} 
+              onClick={() => { setShowMenu(false); onUpgradeClick(); }} 
               className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-zinc-800 transition-colors rounded-xl text-amber-400 cursor-pointer"
             >
               <Crown className="w-5 h-5 text-amber-400" />

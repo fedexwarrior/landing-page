@@ -1,3 +1,4 @@
+
 import express from "express";
 import Stripe from "stripe";
 
@@ -13,7 +14,6 @@ const CREDIT_PACKAGES = [
   { id: 'popular', credits: 120, price: 1000, name: 'Popular Pack' },
   { id: 'value', credits: 300, price: 2000, name: 'Best Value Pack' },
   { id: 'premium', credits: 800, price: 5000, name: 'Premium Pack' },
-  { id: 'pro', credits: 300, price: 2000, name: 'Pro Pack' }, // added so packageId: "pro" from ChatInterface.tsx matches
 ];
 
 app.post(['/chat', '/api/chat'], async (req, res) => {
@@ -67,8 +67,8 @@ app.post(['/create-checkout-session', '/api/create-checkout-session'], async (re
         },
       ],
       mode: 'payment',
-      success_url: successUrl || `${process.env.CLIENT_URL || 'https://velvetcrush.app'}?success=true`,
-      cancel_url: cancelUrl || `${process.env.CLIENT_URL || 'https://velvetcrush.app'}?canceled=true`,
+      success_url: successUrl || `${process.env.CLIENT_URL || 'https://velvetcrush.app'}/success`,
+      cancel_url: cancelUrl || `${process.env.CLIENT_URL || 'https://velvetcrush.app'}/cancel`,
       metadata: {
         userId: userId || 'anonymous',
         packageId: pkg.id,
