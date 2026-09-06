@@ -12,11 +12,36 @@ interface ChatInterfaceProps {
 export default function ChatInterface({ character, onBack, consumeCredit, credits }: ChatInterfaceProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
+  const [messages, setMessages] = useState([
+    { sender: 'character', text: "Hey there! Let's get closer. What's on your mind?" }
+  ]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!inputMessage.trim()) return;
-    // Add your send message logic here
+
+    // Add user message to chat stream
+    setMessages((prev) => [...prev, { sender: 'user', text: inputMessage }]);
     setInputMessage('');
+  };
+
+  const handleCheckout = async () => {
+    try {
+      const response = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ packageId: 'pro' }),
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Checkout Error: ' + JSON.stringify(data));
+      }
+    } catch (err: any) {
+      alert('Fetch failed: ' + (err.message || 'Load failed'));
+    }
   };
 
   return (
@@ -31,31 +56,15 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
             className="fixed top-16 right-4 z-50 glass-strong rounded-2xl border border-glass-border shadow-2xl p-2 w-56 bg-zinc-900/90 backdrop-blur-md"
           >
             <button 
-              onClick={async () => { 
-                try { 
-                  const r = await fetch('https://velvetcrush.app/create-checkout-session', { 
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'}, 
-                    body: JSON.stringify({ packageId: 'pro' }) 
-                  }); 
-                  const d = await r.json(); 
-                  if (d.url) { 
-                    window.location.href = d.url; 
-                  } else { 
-                    alert('Error: ' + JSON.stringify(d)); 
-                  } 
-                } catch (e: any) { 
-                  alert('Fetch failed: ' + e.message); 
-                } 
-              }} 
-              className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-zinc-800 transition-colors rounded-xl text-amber-400"
+              onClick={handleCheckout}
+              className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-zinc-800 transition-colors rounded-xl text-amber-400 cursor-pointer"
             >
               <Crown className="w-5 h-5 text-amber-400" />
               <span>Premium Features</span>
             </button>
 
             <button 
-              className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-zinc-800 transition-colors rounded-xl text-zinc-300"
+              className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-zinc-800 transition-colors rounded-xl text-zinc-300 cursor-pointer"
             >
               <Shield className="w-5 h-5 text-green-500" />
               <span>Privacy Settings</span>
@@ -64,7 +73,8 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
             <hr className="my-2 border-zinc-800" />
 
             <button 
-              className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-zinc-800 transition-colors rounded-xl text-red-400"
+              onClick={() => setMessages([])}
+              className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-zinc-800 transition-colors rounded-xl text-red-400 cursor-pointer"
             >
               <span>Clear Chat</span>
             </button>
@@ -74,24 +84,31 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
 
       {/* Top Header Bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
-        <button onClick={onBack} className="text-sm text-zinc-400 hover:text-white">
+        <button onClick={onBack} className="text-sm text-zinc-400 hover:text-white cursor-pointer">
           ← Back
         </button>
         <span className="font-medium">{character?.name || 'Chat'}</span>
-        <button onClick={() => setShowMenu(!showMenu)} className="p-2 text-zinc-400 hover:text-white">
+        <button onClick={() => setShowMenu(!showMenu)} className="p-2 text-zinc-400 hover:text-white cursor-pointer">
           ⋮
         </button>
       </div>
 
       {/* Chat Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <div className="bg-zinc-900 p-3 rounded-2xl max-w-[80%] text-sm">
-          Hey there! Let's get closer. What's on your mind?
-        </div>
+        {messages.map((msg, index) => (
+          <div 
+            key={index} 
+            className={`p-3 rounded-2xl max-w-[80%] text-sm ${
+              msg.sender === 'user' ? 'ml-auto bg-amber-600/20 text-amber-100 border border-amber-500/30' : 'bg-zinc-900 text-white'
+            }`}
+          >
+            {msg.text}
+          </div>
+        ))}
       </div>
 
-      {/* Input Bar Footer */}
-      <div className="p-3 border-t border-zinc-800 bg-zinc-900/50 flex items-center gap-2">
+      {/* Input Bar Footer Form */}
+      <form onSubmit={handleSendMessage} className="p-3 border-t border-zinc-800 bg-zinc-900/50 flex items-center gap-2">
         <input
           type="text"
           value={inputMessage}
@@ -100,12 +117,12 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
           className="flex-1 bg-zinc-800 text-white px-4 py-2 rounded-full focus:outline-none text-sm"
         />
         <button 
-          onClick={handleSendMessage}
-          className="p-2 bg-amber-500 text-zinc-950 rounded-full hover:bg-amber-400 transition-colors cursor-pointer"
+          type="submit"
+          className="p-2 bg-amber-500 text-zinc-950 rounded-full hover:bg-amber-400 transition-colors cursor-pointer flex items-center justify-center"
         >
           <Send className="w-4 h-4" />
         </button>
-      </div>
+      </form>
     </div>
   );
 }
