@@ -25,7 +25,7 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
     setInputMessage('');
 
     try {
-      const response = await fetch('https://velvetcrush.app/chat', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userText, characterId: character?.id }),
@@ -44,7 +44,7 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
 
   const handleCheckout = async () => {
     try {
-      const res = await fetch("https://velvetcrush.app/create-checkout-session", { 
+      const res = await fetch("/api/create-checkout-session", { 
         method: "POST", 
         headers: { "Content-Type": "application/json" }, 
         body: JSON.stringify({ packageId: "pro" }) 
