@@ -26,7 +26,6 @@ const CREDIT_PACKAGES: CreditPackage[] = [
   { id: 'premium', credits: 800, price: 5000, name: 'Premium Pack' },    // $50.00
 ];
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export function useCredits(initialCredits = 10): UseCreditsReturn {
   // Initialize from localStorage if available
@@ -75,7 +74,7 @@ export function useCredits(initialCredits = 10): UseCreditsReturn {
         throw new Error('Invalid package');
       }
 
-      const response = await fetch(`${API_URL}/api/create-checkout-session`, {
+      const response = await fetch(`/api/create-checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
