@@ -48,8 +48,8 @@ function MainApp() {
   <AuthHarvest userId={user?.id} email={user?.email} />;
 
   const handleCharacterSelect = (character: VelvCharacter) => {
-    // Check if premium character requires credits
-    if (character.isPremium && userCredits <= 0) {
+    // Premium characters always require a top-up first
+    if (character.isPremium) {
       setShowTopUpModal(true);
       return;
     }
