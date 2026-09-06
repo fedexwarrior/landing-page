@@ -28,7 +28,7 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-app.post('/create-checkout-session', async (req, res) => {
+app.post(['/create-checkout-session', '/api/create-checkout-session'], async (req, res) => {
   try {
     const { packageId } = req.body;
     res.json({ url: "https://checkout.stripe.com/pay/test" });
