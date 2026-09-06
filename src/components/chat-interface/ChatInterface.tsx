@@ -32,8 +32,8 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
       });
 
       const data = await response.json();
-      if (data.reply) {
-        setMessages((prev) => [...prev, { sender: 'character', text: data.reply }]);
+      if (data.message) {
+        setMessages((prev) => [...prev, { sender: 'character', text: data.message }]);
       } else {
         setMessages((prev) => [...prev, { sender: 'character', text: "..." }]);
       }
