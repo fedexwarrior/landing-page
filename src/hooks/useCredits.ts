@@ -82,7 +82,7 @@ export function useCredits(initialCredits = 10): UseCreditsReturn {
         body: JSON.stringify({
           packageId,
           userId: localStorage.getItem('velvetcrush_user_id') || 'anonymous',
-          successUrl: `${window.location.origin}/success`,
+          successUrl: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${window.location.origin}/cancel`,
         }),
       });

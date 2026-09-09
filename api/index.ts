@@ -1,4 +1,3 @@
-
 import express from "express";
 import Stripe from "stripe";
 
@@ -79,6 +78,28 @@ app.post(['/create-checkout-session', '/api/create-checkout-session'], async (re
     res.json({ sessionId: session.id, url: session.url });
   } catch (error: any) {
     console.error('Stripe error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get(['/verify-session', '/api/verify-session'], async (req, res) => {
+  try {
+    const sessionId = req.query.session_id as string;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Missing session_id' });
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status !== 'paid') {
+      return res.status(400).json({ error: 'Payment not completed' });
+    }
+
+    const credits = parseInt(session.metadata?.credits || '0', 10);
+
+    res.json({ verified: true, credits });
+  } catch (error: any) {
+    console.error('Verify session error:', error);
     res.status(500).json({ error: error.message });
   }
 });

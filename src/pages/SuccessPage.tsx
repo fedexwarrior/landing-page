@@ -11,13 +11,19 @@ export default function SuccessPage() {
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const verifySession = useCallback(async (_sessionId: string) => {
+  const verifySession = useCallback(async (sessionId: string) => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setCredits(userCredits + 50);
+      const response = await fetch(`/api/verify-session?session_id=${encodeURIComponent(sessionId)}`);
+      const data = await response.json();
+
+      if (!response.ok || !data.verified) {
+        throw new Error(data.error || 'Payment could not be verified');
+      }
+
+      setCredits(userCredits + data.credits);
       setVerified(true);
-    } catch {
-      setError('Failed to verify payment');
+    } catch (err: any) {
+      setError(err.message || 'Failed to verify payment');
     }
   }, [setCredits, userCredits]);
 
