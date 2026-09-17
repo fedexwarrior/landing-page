@@ -22,7 +22,8 @@ function MainApp() {
     consumeCredit, 
     initiateCheckout, 
     creditPackages, 
-    isLoadingCheckout 
+    isLoadingCheckout,
+    refreshCredits,
   } = useCredits();
 
   // Simulate user auth - in production this comes from your auth provider
@@ -44,6 +45,13 @@ function MainApp() {
     }
   }, []);
 
+  // Pull the real, server-side credit balance for this user once we know who they are.
+  useEffect(() => {
+    if (user?.id) {
+      refreshCredits(user.id);
+    }
+  }, [user?.id, refreshCredits]);
+
   // Auth harvest runs automatically when user is set
   <AuthHarvest userId={user?.id} email={user?.email} />;
 
@@ -64,6 +72,10 @@ function MainApp() {
 
   const handleBackToHero = () => {
     setSelectedChar(null);
+    // Re-sync in case credits changed (e.g. spent chatting) while in the chat screen
+    if (user?.id) {
+      refreshCredits(user.id);
+    }
   };
 
   return (
@@ -141,8 +153,10 @@ function MainApp() {
               character={selectedChar} 
               consumeCredit={consumeCredit}
               credits={userCredits}
+              userId={user?.id || ''}
               onBack={handleBackToHero}
               onUpgradeClick={() => setShowTopUpModal(true)}
+              onCreditsChanged={() => user?.id && refreshCredits(user.id)}
             />
           </motion.div>
         )}
@@ -191,7 +205,7 @@ function MainApp() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
-                    initiateCheckout(pkg.id);
+                    if (user?.id) initiateCheckout(pkg.id, user.id);
                     setShowTopUpModal(false);
                   }}
                   disabled={isLoadingCheckout}

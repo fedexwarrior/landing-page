@@ -7,9 +7,10 @@ import { motion } from 'framer-motion';
 
 export default function SuccessPage() {
   const [searchParams] = useSearchParams();
-  const { setCredits, userCredits } = useCredits();
+  const { setCredits } = useCredits();
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [finalCredits, setFinalCredits] = useState<number>(0);
 
   const verifySession = useCallback(async (sessionId: string) => {
     try {
@@ -20,12 +21,15 @@ export default function SuccessPage() {
         throw new Error(data.error || 'Payment could not be verified');
       }
 
-      setCredits(userCredits + data.credits);
+      // data.credits is the REAL server-side total for this user (idempotent —
+      // safe even if this page loads twice or the request is retried).
+      setCredits(data.credits);
+      setFinalCredits(data.credits);
       setVerified(true);
     } catch (err: any) {
       setError(err.message || 'Failed to verify payment');
     }
-  }, [setCredits, userCredits]);
+  }, [setCredits]);
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
@@ -108,7 +112,7 @@ export default function SuccessPage() {
         <p className="text-zinc-400 mb-6">Your credits have been added to your account.</p>
         <p className="text-gold font-medium mb-6 flex items-center justify-center gap-2">
           <Crown className="w-5 h-5" />
-          Current Credits: {userCredits}
+          Current Credits: {finalCredits}
         </p>
         <Link 
           to="/" 

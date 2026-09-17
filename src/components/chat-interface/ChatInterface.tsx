@@ -7,10 +7,12 @@ interface ChatInterfaceProps {
   onBack: () => void;
   consumeCredit: () => boolean;
   credits: number;
+  userId: string;
   onUpgradeClick: () => void;
+  onCreditsChanged: () => void;
 }
 
-export default function ChatInterface({ character, onBack, consumeCredit, credits, onUpgradeClick }: ChatInterfaceProps) {
+export default function ChatInterface({ character, onBack, consumeCredit, credits, userId, onUpgradeClick, onCreditsChanged }: ChatInterfaceProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [messages, setMessages] = useState([
@@ -29,12 +31,20 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText, characterId: character?.id }),
+        body: JSON.stringify({ message: userText, characterId: character?.id, userId }),
       });
+
+      if (response.status === 402) {
+        // Server says: no credits. Don't just show a silent "...", tell them why and offer the fix.
+        setMessages((prev) => [...prev, { sender: 'character', text: "You're out of credits — top up to keep chatting with me." }]);
+        onUpgradeClick();
+        return;
+      }
 
       const data = await response.json();
       if (data.message) {
         setMessages((prev) => [...prev, { sender: 'character', text: data.message }]);
+        onCreditsChanged(); // a credit was likely just spent server-side; refresh the real balance
       } else {
         setMessages((prev) => [...prev, { sender: 'character', text: "..." }]);
       }
