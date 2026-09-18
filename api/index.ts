@@ -24,10 +24,12 @@ const SESSION_COOKIE = "vc_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const SIGNUP_BONUS_CREDITS = 20;
 const COST_PER_MESSAGE = 5;
+const COST_PER_IMAGE = 30;
 
 const chatRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(20, "1 m"), prefix: "ratelimit:chat" });
 const checkoutRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "1 m"), prefix: "ratelimit:checkout" });
 const authRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "1 m"), prefix: "ratelimit:auth" });
+const imageRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "1 m"), prefix: "ratelimit:image" });
 
 const CREDIT_PACKAGES = [
   { id: 'starter', credits: 50, price: 500, name: 'Starter Pack' },
@@ -283,6 +285,46 @@ app.get(['/credits', '/api/credits'], async (req, res) => {
   } catch (error: any) {
     console.error('Credits fetch error:', error.message);
     res.status(500).json({ error: "Could not fetch credits." });
+  }
+});
+
+// --- IMAGE GENERATION: requires a real session; identity from cookie; deduct 30 credits ---
+app.post(['/generate-image', '/api/generate-image'], async (req, res) => {
+  try {
+    const ip = getClientIp(req);
+    const { success } = await imageRateLimit.limit(ip);
+    if (!success) return res.status(429).json({ error: "Too many image generation requests. Please wait a minute and try again." });
+
+    const userId = await getUserIdFromSession(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Please sign in to generate images." });
+    }
+
+    const { style, eyeColor, eyeShape, bodyType, outfit, setting } = req.body;
+
+    if (typeof style !== "string" || !["realistic", "anime"].includes(style)) {
+      return res.status(400).json({ error: "Invalid style. Must be 'realistic' or 'anime'." });
+    }
+
+    const currentCredits = await redis.get<number>(`credits:${userId}`) ?? 0;
+    if (currentCredits < COST_PER_IMAGE) {
+      return res.status(402).json({ error: "Not enough credits. Please top up to generate images." });
+    }
+
+    const newBalance = await redis.decrby(`credits:${userId}`, COST_PER_IMAGE);
+    if (newBalance < 0) {
+      await redis.incrby(`credits:${userId}`, COST_PER_IMAGE);
+      return res.status(402).json({ error: "Not enough credits. Please top up to generate images." });
+    }
+
+    // TODO: Replace with actual image generation provider call
+    const placeholderUrl = `https://placehold.co/1024x1536/1C1C20/9A9AA2?text=${style}+${eyeColor}+${eyeShape}+${bodyType}+${outfit}+${setting}`;
+
+    res.json({ imageUrl: placeholderUrl, credits: newBalance, prompt: { style, eyeColor, eyeShape, bodyType, outfit, setting } });
+  } catch (error) {
+    const err = error as Error;
+    console.error("Image generation error:", err.message);
+    res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 });
 

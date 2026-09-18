@@ -1,122 +1,85 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { VELV_CHARACTERS, VelvCharacter } from '@/config/characters';
-import { Crown, Sparkles, ChevronRight, Lock } from 'lucide-react';
-import { clsx } from 'clsx';
+import { Crown } from 'lucide-react';
 
 interface HeroScreenProps {
   onCharacterSelect: (character: VelvCharacter) => void;
 }
 
 export function HeroScreen({ onCharacterSelect }: HeroScreenProps) {
-  const premiumCharacters = VELV_CHARACTERS.filter(c => c.isPremium).slice(0, 4);
-  const freeCharacters = VELV_CHARACTERS.filter(c => !c.isPremium).slice(0, 4);
-  const displayCharacters = [...premiumCharacters, ...freeCharacters].slice(0, 4);
-
   return (
-    <div className="min-h-screen bg-bg-primary relative overflow-hidden">
-      {/* Background ambient glow */}
+    <div className="min-h-screen bg-midnight text-white flex flex-col">
+      {/* Ambient glow */}
       <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-radial-gold rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-radial-blush rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-gold/5 via-transparent to-blush/5 rounded-full blur-3xl animate-pulse-soft" />
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-radial-velvet rounded-full blur-3xl animate-float opacity-50" />
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-radial-velvet rounded-full blur-3xl animate-float opacity-50" style={{ animationDelay: '2s' }} />
       </div>
 
-      {/* Subtle grid pattern overlay */}
-      <div className="fixed inset-0 -z-10 opacity-20" aria-hidden="true">
-        <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <defs>
-            <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.3" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
-      </div>
+      {/* Header */}
+      <header className="relative z-10 px-6 py-6 md:px-8 md:py-8">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
+            <span className="text-gradient-velvet font-display font-bold text-2xl md:text-3xl tracking-tight">
+              Velvet
+            </span>
+            <span className="font-display font-light text-2xl md:text-3xl tracking-tight ml-1 text-white">
+              Crush
+            </span>
+          </motion.div>
+        </div>
+      </header>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.8 }}
-        className="relative z-10 min-h-screen flex flex-col"
-      >
-        {/* Header */}
-        <header className="px-6 py-6 md:px-10 md:py-8">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-            >
-              <span className="text-gradient-gold font-display font-bold text-xl md:text-2xl tracking-tight">
-                Velvet
-              </span>
-              <span className="text-gradient-blush font-display font-bold text-xl md:text-2xl tracking-tight ml-1">
-                Crush
-              </span>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="flex items-center gap-3"
-            >
-              <div className="hidden md:flex items-center gap-2 px-4 py-2 glass rounded-full border-gold/30">
-                <Crown className="w-4 h-4 text-gold" />
-                <span className="text-sm font-medium text-gold">Premium</span>
-              </div>
-            </motion.div>
+      {/* Hero Content */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 md:px-8 pb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="text-center max-w-3xl mb-12"
+        >
+          <h1 className="font-display font-light text-4xl md:text-6xl lg:text-7xl leading-tight tracking-tight mb-6">
+            Choose your
+            <br />
+            <span className="font-medium text-gradient-velvet">companion</span>
+          </h1>
+          <p className="text-muted text-lg md:text-xl leading-relaxed text-balance">
+            Each presence is unique. Select one to begin your private session.
+          </p>
+        </motion.div>
+
+        {/* Character Horizontal Swipe */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="w-full max-w-6xl"
+        >
+          <div className="flex gap-4 overflow-x-auto snap-x pb-4 scrollbar-hide -mx-6 px-6">
+            {VELV_CHARACTERS.map((character, index) => (
+              <CharacterCard
+                key={character.id}
+                character={character}
+                index={index}
+                onSelect={onCharacterSelect}
+              />
+            ))}
           </div>
-        </header>
+        </motion.div>
 
-        {/* Hero Content */}
-        <main className="flex-1 flex flex-col items-center justify-center px-6 md:px-10 pb-20">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-center max-w-3xl mb-16"
-          >
-            <h1 className="font-display font-light text-4xl md:text-6xl lg:text-7xl leading-tight tracking-tight mb-6">
-              Choose your
-              <br />
-              <span className="font-medium text-gradient-gold">companion</span>
-            </h1>
-            <p className="text-zinc-400 text-lg md:text-xl leading-relaxed text-balance">
-              Each presence is unique. Select one to begin your private session.
-            </p>
-          </motion.div>
-
-          {/* Character Grid - 3-4 cards */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="w-full max-w-5xl"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {displayCharacters.map((character, index) => (
-                <CharacterCard
-                  key={character.id}
-                  character={character}
-                  index={index}
-                  onSelect={onCharacterSelect}
-                />
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Bottom disclaimer */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
-            className="mt-12 text-center text-zinc-600 text-sm"
-          >
-            Private • Encrypted • No logs stored
-          </motion.p>
-        </main>
-      </motion.div>
+        {/* Bottom disclaimer */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
+          className="mt-12 text-center text-muted text-sm"
+        >
+          Private &bull; Encrypted &bull; No logs stored
+        </motion.p>
+      </main>
     </div>
   );
 }
@@ -128,7 +91,7 @@ interface CharacterCardProps {
 }
 
 function CharacterCard({ character, index, onSelect }: CharacterCardProps) {
-  const isPremium = character.isPremium;
+  const isFeatured = character.isFeatured || character.isNew || character.isPopular;
 
   return (
     <motion.article
@@ -137,110 +100,51 @@ function CharacterCard({ character, index, onSelect }: CharacterCardProps) {
       transition={{ duration: 0.6, delay: 0.5 + index * 0.08, ease: [0.16, 1, 0.3, 1] }}
       whileHover={{ y: -8, scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className={clsx(
-        'relative group cursor-pointer card-premium overflow-hidden aspect-[3/4]',
-        isPremium && 'ring-1 ring-gold/20'
-      )}
+      className="relative flex-shrink-0 w-[280px] md:w-[300px] snap-center card-velvet overflow-hidden cursor-pointer"
       onClick={() => onSelect(character)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(character); }}
       role="button"
       tabIndex={0}
     >
-      {/* Image with hover reveal effect */}
-      <div className="absolute inset-0 overflow-hidden">
-        <motion.img
+      {/* Image fills top ~70% */}
+      <div className="relative h-[70%] w-full overflow-hidden">
+        <img
           src={character.avatar}
           alt={character.name}
-          className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105 group-hover:brightness-110 group-hover:grayscale-0 grayscale-20"
-          initial={{ scale: 1.1 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 1.2, ease: 'easeOut' }}
+          className="w-full h-full object-cover transition-all duration-700 hover:scale-105 hover:brightness-110"
         />
         
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/90 via-transparent to-transparent" />
+        {/* Gradient fade to black at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-[60%] bg-gradient-to-t from-midnight via-transparent to-transparent" />
         
-        {/* Premium shimmer on hover */}
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/10 to-transparent"
-          initial={{ opacity: 0 }}
-          whileHover={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-        />
-      </div>
-
-      {/* Content overlay */}
-      <div className="relative z-10 h-full flex flex-col p-5 md:p-6">
-        <div className="flex-1 flex flex-col justify-end">
-          {/* Premium badge */}
-          <AnimatePresence>
-            {isPremium && (
-              <motion.div
-                key="premium"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full glass border-gold/30 mb-3 w-fit"
-              >
-                <Crown className="w-3.5 h-3.5 text-gold" />
-                <span className="text-xs font-semibold text-gold tracking-wide">PREMIUM</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Name & aesthetic */}
-          <div className="space-y-1.5">
-            <h2 className="font-display font-medium text-xl md:text-2xl text-white">
-              {character.name}
-            </h2>
-            <p className="text-zinc-400 text-sm md:text-base line-clamp-2 leading-relaxed">
-              {character.visualAesthetic}
-            </p>
-          </div>
-
-          {/* Personality preview */}
-          <p className="mt-4 text-zinc-500 text-sm leading-relaxed line-clamp-3">
-            {character.personality}
-          </p>
-        </div>
-
-        {/* Select button */}
-        <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
-          whileHover={{ x: 4 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={(e) => { e.stopPropagation(); onSelect(character); }}
-          className={clsx(
-            'mt-6 w-full py-3 rounded-xl font-medium text-sm transition-all duration-300 flex items-center justify-center gap-2',
-            isPremium
-              ? 'btn-premium'
-              : 'bg-glass-medium text-white border border-glass-border hover:border-gold/30 hover:bg-glass-strong'
-          )}
-        >
-          <span>{isPremium ? 'Enter Private Session' : 'Start Free Chat'}</span>
-          <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-        </motion.button>
-
-        {/* Lock indicator for premium */}
-        {isPremium && (
+        {/* Featured badge top-left */}
+        {isFeatured && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 }}
-            className="absolute bottom-4 right-4 flex items-center gap-1 px-3 py-1.5 glass border-gold/30 rounded-full"
+            transition={{ delay: 0.3 }}
+            className="absolute top-3 left-3 z-10 px-2 py-1 rounded-full bg-velvet/90 text-white text-xs font-medium flex items-center gap-1"
           >
-            <Lock className="w-3.5 h-3.5 text-gold/70" />
-            <span className="text-xs text-gold/70">Exclusive</span>
+            <Crown className="w-3 h-3" />
+            FEATURED
           </motion.div>
         )}
       </div>
 
+      {/* Name + personality in bottom ~30% */}
+      <div className="p-5 flex flex-col justify-end h-[30%]">
+        <h2 className="font-display font-medium text-lg text-white mb-1 truncate">
+          {character.name}
+        </h2>
+        <p className="text-muted text-sm leading-relaxed line-clamp-2">
+          {character.personality}
+        </p>
+      </div>
+
       {/* Subtle border glow on hover */}
       <motion.div
-        className="absolute inset-0 border-2 border-gold/0 rounded-2xl pointer-events-none"
-        whileHover={{ borderOpacity: 0.4 }}
+        className="absolute inset-0 border-2 border-velvet/0 rounded-xl pointer-events-none"
+        whileHover={{ borderOpacity: 0.5 }}
         transition={{ duration: 0.3 }}
       />
     </motion.article>
