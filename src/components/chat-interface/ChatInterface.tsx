@@ -5,37 +5,37 @@ import { Crown, Shield, Send } from 'lucide-react';
 interface ChatInterfaceProps {
   character: any;
   onBack: () => void;
-  consumeCredit: () => boolean;
+  isSignedIn: boolean;
   credits: number;
-  userId: string;
+  onRequireAuth: (reason: string, action: () => void) => void;
+  onCreditsUpdate: (newCredits: number) => void;
   onUpgradeClick: () => void;
-  onCreditsChanged: () => void;
 }
 
-export default function ChatInterface({ character, onBack, consumeCredit, credits, userId, onUpgradeClick, onCreditsChanged }: ChatInterfaceProps) {
+export default function ChatInterface({ character, onBack, isSignedIn, credits, onRequireAuth, onCreditsUpdate, onUpgradeClick }: ChatInterfaceProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [messages, setMessages] = useState([
     { sender: 'character', text: "Hey there! Let's get closer. What's on your mind?" }
   ]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputMessage.trim()) return;
-
-    const userText = inputMessage;
+  const sendToServer = async (userText: string) => {
     setMessages((prev) => [...prev, { sender: 'user', text: userText }]);
-    setInputMessage('');
 
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText, characterId: character?.id, userId }),
+        body: JSON.stringify({ message: userText, characterId: character?.id }),
       });
 
+      if (response.status === 401) {
+        // Session expired mid-chat — ask them to sign in again, then retry this same message.
+        onRequireAuth("Please sign in again to keep chatting.", () => sendToServer(userText));
+        return;
+      }
+
       if (response.status === 402) {
-        // Server says: no credits. Don't just show a silent "...", tell them why and offer the fix.
         setMessages((prev) => [...prev, { sender: 'character', text: "You're out of credits — top up to keep chatting with me." }]);
         onUpgradeClick();
         return;
@@ -44,13 +44,28 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
       const data = await response.json();
       if (data.message) {
         setMessages((prev) => [...prev, { sender: 'character', text: data.message }]);
-        onCreditsChanged(); // a credit was likely just spent server-side; refresh the real balance
+        if (typeof data.credits === 'number') onCreditsUpdate(data.credits);
       } else {
         setMessages((prev) => [...prev, { sender: 'character', text: "..." }]);
       }
     } catch (err) {
       console.error('Failed to get response', err);
     }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const userText = inputMessage.trim();
+    if (!userText) return;
+
+    if (!isSignedIn) {
+      // Never hits the server, never costs a cent — sign in first, then this exact message sends automatically.
+      onRequireAuth("Sign in to start chatting — you'll get 20 free credits.", () => sendToServer(userText));
+      return;
+    }
+
+    setInputMessage('');
+    sendToServer(userText);
   };
 
   return (
@@ -64,24 +79,22 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             className="fixed top-16 right-4 z-50 glass-strong rounded-2xl border border-glass-border shadow-2xl p-2 w-56 bg-zinc-900/90 backdrop-blur-md"
           >
-            <button 
-              onClick={() => { setShowMenu(false); onUpgradeClick(); }} 
+            <button
+              onClick={() => { setShowMenu(false); onUpgradeClick(); }}
               className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-zinc-800 transition-colors rounded-xl text-amber-400 cursor-pointer"
             >
               <Crown className="w-5 h-5 text-amber-400" />
               <span>Premium Features</span>
             </button>
 
-            <button 
-              className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-zinc-800 transition-colors rounded-xl text-zinc-300 cursor-pointer"
-            >
+            <button className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-zinc-800 transition-colors rounded-xl text-zinc-300 cursor-pointer">
               <Shield className="w-5 h-5 text-green-500" />
               <span>Privacy Settings</span>
             </button>
 
             <hr className="my-2 border-zinc-800" />
 
-            <button 
+            <button
               onClick={() => setMessages([])}
               className="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-zinc-800 transition-colors rounded-xl text-red-400 cursor-pointer"
             >
@@ -97,16 +110,21 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
           ← Back
         </button>
         <span className="font-medium">{character?.name || 'Chat'}</span>
-        <button onClick={() => setShowMenu(!showMenu)} className="p-2 text-zinc-400 hover:text-white cursor-pointer">
-          ⋮
-        </button>
+        <div className="flex items-center gap-3">
+          {isSignedIn && (
+            <span className="text-xs text-gold font-medium">{credits} credits</span>
+          )}
+          <button onClick={() => setShowMenu(!showMenu)} className="p-2 text-zinc-400 hover:text-white cursor-pointer">
+            ⋮
+          </button>
+        </div>
       </div>
 
       {/* Chat Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, index) => (
-          <div 
-            key={index} 
+          <div
+            key={index}
             className={`p-3 rounded-2xl max-w-[80%] text-sm ${
               msg.sender === 'user' ? 'ml-auto bg-amber-600/20 text-amber-100 border border-amber-500/30' : 'bg-zinc-900 text-white'
             }`}
@@ -125,7 +143,7 @@ export default function ChatInterface({ character, onBack, consumeCredit, credit
           placeholder="Type a message..."
           className="flex-1 bg-zinc-800 text-white px-4 py-2 rounded-full focus:outline-none text-sm"
         />
-        <button 
+        <button
           type="submit"
           className="p-2 bg-amber-500 text-zinc-950 rounded-full hover:bg-amber-400 transition-colors cursor-pointer flex items-center justify-center"
         >

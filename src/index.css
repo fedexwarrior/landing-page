@@ -68,6 +68,13 @@
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.02); }
   }
+--color-velvet: #C4133C;
+  --color-velvet-dark: #8E0E2B;
+  --color-midnight: #0A0A0C;
+  --color-panel: #1C1C20;
+  --color-panel-border: #3A3A40;
+  --color-muted: #9A9AA2;
+  --font-button: "Kozuka Gothic Pro", -apple-system, sans-serif;
 }
 
 @layer base {
