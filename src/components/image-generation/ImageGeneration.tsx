@@ -85,12 +85,14 @@ const STYLE_OPTIONS = [
     label: 'Realistic',
     description: 'Realistic CGI blend — magazine quality',
     examplePrompt: 'photorealistic woman beach sunset golden hour 8k',
+    image: '/images/style-realistic.jpg',
   },
   {
     value: 'anime' as const,
     label: 'Anime',
     description: 'Stylized anime illustration',
     examplePrompt: 'anime illustration woman beach vibrant colors detailed',
+    image: '/images/style-anime.jpg',
   },
 ];
 
@@ -432,11 +434,12 @@ function StyleChoiceStep({ options, selected, onSelect }: StyleChoiceStepProps) 
                 : 'border-panel-border hover:border-velvet/50'
             )}
           >
-            <div className="flex-1 relative bg-panel border-b border-panel-border">
-              <div className="absolute inset-0 bg-gradient-to-br from-velvet/10 to-velvet-dark/10" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Sparkles className="w-16 h-16 text-velvet/30" />
-              </div>
+            <div className="flex-1 relative bg-panel border-b border-panel-border overflow-hidden">
+              <img
+                src={opt.image}
+                alt={opt.label}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
             </div>
             <div className="p-4 flex flex-col justify-between">
               <div>
