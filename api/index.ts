@@ -24,10 +24,12 @@ const SESSION_COOKIE = "vc_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const SIGNUP_BONUS_CREDITS = 20;
 const COST_PER_MESSAGE = 5;
+const COST_PER_IMAGE = 30;
 
 const chatRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(20, "1 m"), prefix: "ratelimit:chat" });
 const checkoutRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "1 m"), prefix: "ratelimit:checkout" });
 const authRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "1 m"), prefix: "ratelimit:auth" });
+const imageRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "1 m"), prefix: "ratelimit:image" });
 
 const CREDIT_PACKAGES = [
   { id: 'starter', credits: 50, price: 500, name: 'Starter Pack' },
@@ -35,6 +37,15 @@ const CREDIT_PACKAGES = [
   { id: 'value', credits: 300, price: 2000, name: 'Best Value Pack' },
   { id: 'premium', credits: 800, price: 5000, name: 'Premium Pack' },
 ];
+
+// Allowed image options. These must match the values in ImageGeneration.tsx exactly.
+const ALLOWED_IMAGE_OPTIONS: Record<string, string[]> = {
+  eyeColor: ['blue', 'green', 'brown', 'hazel', 'violet', 'amber', 'gray', 'heterochromia'],
+  eyeShape: ['almond', 'round', 'hooded', 'upturned', 'downturned', 'monolid'],
+  bodyType: ['slim', 'athletic', 'curvy', 'petite', 'tall', 'voluptuous'],
+  outfit: ['bikini', 'one-piece', 'sundress', 'cover-up', 'shorts-tank', 'sarong'],
+  setting: ['beach', 'poolside', 'indoor', 'sunset', 'tropical-garden', 'luxury-resort'],
+};
 
 function getClientIp(req: express.Request): string {
   const forwarded = req.headers["x-forwarded-for"];
@@ -283,6 +294,108 @@ app.get(['/credits', '/api/credits'], async (req, res) => {
   } catch (error: any) {
     console.error('Credits fetch error:', error.message);
     res.status(500).json({ error: "Could not fetch credits." });
+  }
+});
+
+// --- IMAGE GENERATION: requires a real session; identity from cookie; deduct 30 credits ---
+app.post(['/generate-image', '/api/generate-image'], async (req, res) => {
+  // Declared out here (outside the try) so the catch block can see them
+  let userId: string | null = null;
+  let charged = false;
+
+  try {
+    const ip = getClientIp(req);
+    const { success } = await imageRateLimit.limit(ip);
+    if (!success) return res.status(429).json({ error: "Too many image generation requests. Please wait a minute and try again." });
+
+    userId = await getUserIdFromSession(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Please sign in to generate images." });
+    }
+
+    const { style, eyeColor, eyeShape, bodyType, outfit, setting } = req.body;
+
+    if (typeof style !== "string" || !["realistic", "anime"].includes(style)) {
+      return res.status(400).json({ error: "Invalid style. Must be 'realistic' or 'anime'." });
+    }
+
+    // Every other choice must be one of the allowed values (checked before any credits are taken)
+    const choices: Record<string, unknown> = { eyeColor, eyeShape, bodyType, outfit, setting };
+    for (const [field, allowed] of Object.entries(ALLOWED_IMAGE_OPTIONS)) {
+      const value = choices[field];
+      if (typeof value !== "string" || !allowed.includes(value)) {
+        return res.status(400).json({ error: `Invalid ${field}.` });
+      }
+    }
+
+    const currentCredits = await redis.get<number>(`credits:${userId}`) ?? 0;
+    if (currentCredits < COST_PER_IMAGE) {
+      return res.status(402).json({ error: "Not enough credits. Please top up to generate images." });
+    }
+
+    const newBalance = await redis.decrby(`credits:${userId}`, COST_PER_IMAGE);
+    if (newBalance < 0) {
+      await redis.incrby(`credits:${userId}`, COST_PER_IMAGE);
+      return res.status(402).json({ error: "Not enough credits. Please top up to generate images." });
+    }
+    charged = true; // credits are now taken; refund them if anything goes wrong below
+
+    // --- Build the actual prompt from the person's choices ---
+    // Values are already validated above; this just turns "one-piece" into "one piece", etc.
+    const words = (v: string) => v.replace(/-/g, " ");
+
+    const styleDescriptor = style === "anime"
+      ? "anime illustration style, cel-shaded, vibrant anime art"
+      : "photorealistic CGI blend, magazine quality render, realistic skin and lighting";
+
+    const promptParts = [
+      "attractive adult woman",
+      `${words(eyeColor)} eyes`,
+      `${words(eyeShape)} eye shape`,
+      `${words(bodyType)} body type`,
+      `wearing ${words(outfit)}`,
+      `${words(setting)} setting`,
+      styleDescriptor,
+    ].join(", ");
+
+    // --- Call fal.ai to actually generate the image ---
+    const falResponse = await fetch("https://fal.run/fal-ai/flux/dev", {
+      method: "POST",
+      headers: {
+        "Authorization": `Key ${process.env.FAL_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: promptParts,
+        image_size: "portrait_4_3",
+        num_images: 1,
+      }),
+    });
+
+    if (!falResponse.ok) {
+      await redis.incrby(`credits:${userId}`, COST_PER_IMAGE);
+      charged = false;
+      const errText = await falResponse.text();
+      console.error("fal.ai error:", errText);
+      return res.status(502).json({ error: "Image generation failed. Your credits were refunded." });
+    }
+
+    const falData = await falResponse.json();
+    const imageUrl = falData.images?.[0]?.url;
+
+    if (!imageUrl) {
+      await redis.incrby(`credits:${userId}`, COST_PER_IMAGE);
+      charged = false;
+      return res.status(502).json({ error: "Image generation failed. Your credits were refunded." });
+    }
+
+    charged = false; // success, nothing to refund
+    res.json({ imageUrl, credits: newBalance, prompt: { style, eyeColor, eyeShape, bodyType, outfit, setting } });
+  } catch (error) {
+    const err = error as Error;
+    console.error("Image generation error:", err.message);
+    if (charged && userId) await redis.incrby(`credits:${userId}`, COST_PER_IMAGE);
+    res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 });
 
