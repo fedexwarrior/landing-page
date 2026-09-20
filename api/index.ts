@@ -30,6 +30,7 @@ const chatRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(20
 const checkoutRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "1 m"), prefix: "ratelimit:checkout" });
 const authRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "1 m"), prefix: "ratelimit:auth" });
 const imageRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "1 m"), prefix: "ratelimit:image" });
+const webhookRateLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(60, "1 m"), prefix: "ratelimit:webhook" });
 
 const CREDIT_PACKAGES = [
   { id: 'starter', credits: 50, price: 500, name: 'Starter Pack' },
@@ -71,6 +72,34 @@ async function createSession(res: express.Response, googleSub: string) {
     maxAge: SESSION_TTL_SECONDS * 1000,
     path: "/",
   });
+}
+
+// --- Stripe: give credits for a paid checkout session ---
+// Used by BOTH the success page (/verify-session) and the Stripe webhook.
+// Safe to call any number of times: the redeemed:<sessionId> marker is claimed
+// atomically (nx), so the credits are only ever added once per purchase.
+async function redeemCheckoutSession(sessionId: string) {
+  // Always ask Stripe directly whether this session is really paid
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  if (session.payment_status !== "paid") return { status: "unpaid" as const };
+
+  const userId = session.metadata?.userId;
+  const creditsToAdd = parseInt(session.metadata?.credits || "0", 10);
+  if (!userId || !creditsToAdd) return { status: "invalid" as const };
+
+  const claimed = await redis.set(`redeemed:${sessionId}`, userId, { nx: true });
+  if (!claimed) {
+    const credits = await redis.get<number>(`credits:${userId}`) ?? 0;
+    return { status: "already" as const, credits };
+  }
+
+  try {
+    const credits = await redis.incrby(`credits:${userId}`, creditsToAdd);
+    return { status: "credited" as const, credits };
+  } catch (err) {
+    await redis.del(`redeemed:${sessionId}`); // let a retry try again
+    throw err;
+  }
 }
 
 // --- AUTH ---
@@ -264,24 +293,45 @@ app.get(['/verify-session', '/api/verify-session'], async (req, res) => {
     if (typeof sessionId !== "string" || !sessionId.startsWith("cs_")) {
       return res.status(400).json({ error: 'Invalid session_id' });
     }
-    const alreadyRedeemed = await redis.get(`redeemed:${sessionId}`);
-    if (alreadyRedeemed) {
-      const userId = alreadyRedeemed as string;
-      const currentCredits = await redis.get<number>(`credits:${userId}`) ?? 0;
-      return res.json({ verified: true, credits: currentCredits, alreadyRedeemed: true });
+    const result = await redeemCheckoutSession(sessionId);
+    if (result.status === "unpaid") return res.status(400).json({ error: 'Payment not completed' });
+    if (result.status === "invalid") return res.status(400).json({ error: 'Invalid session' });
+    if (result.status === "already") {
+      return res.json({ verified: true, credits: result.credits, alreadyRedeemed: true });
     }
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    if (session.payment_status !== 'paid') {
-      return res.status(400).json({ error: 'Payment not completed' });
-    }
-    const creditsToAdd = parseInt(session.metadata?.credits || '0', 10);
-    const userId = session.metadata?.userId || 'anonymous';
-    const newBalance = await redis.incrby(`credits:${userId}`, creditsToAdd);
-    await redis.set(`redeemed:${sessionId}`, userId, { ex: 60 * 60 * 24 * 30 });
-    res.json({ verified: true, credits: newBalance });
+    res.json({ verified: true, credits: result.credits });
   } catch (error: any) {
     console.error('Verify session error:', error.message);
     res.status(500).json({ error: "Could not verify payment." });
+  }
+});
+
+// --- STRIPE WEBHOOK: credits buyers even if they close the tab before the success page loads ---
+// We never trust the webhook body itself. We only read the session id from it, then ask
+// Stripe directly whether that session is paid (see redeemCheckoutSession).
+app.post(['/stripe-webhook', '/api/stripe-webhook'], async (req, res) => {
+  try {
+    const ip = getClientIp(req);
+    const { success } = await webhookRateLimit.limit(ip);
+    if (!success) return res.status(429).json({ error: "Too many requests" });
+
+    const event = req.body;
+    const sessionId = event?.data?.object?.id;
+    if (
+      event?.type === "checkout.session.completed" &&
+      typeof sessionId === "string" &&
+      sessionId.startsWith("cs_")
+    ) {
+      await redeemCheckoutSession(sessionId);
+    }
+    res.json({ received: true });
+  } catch (error: any) {
+    if (error?.code === "resource_missing") {
+      // Stripe has no such session (e.g. a dashboard "test event"); retrying won't help
+      return res.json({ received: true, ignored: true });
+    }
+    console.error("Stripe webhook error:", error.message);
+    res.status(500).json({ error: "Webhook failed" }); // Stripe will retry automatically
   }
 });
 
