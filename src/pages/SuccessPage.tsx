@@ -1,13 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useCredits } from '../hooks/useCredits';
 import { CheckCircle, Loader2, ArrowLeft, Crown } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 export default function SuccessPage() {
   const [searchParams] = useSearchParams();
-  const { setCredits } = useCredits();
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [finalCredits, setFinalCredits] = useState<number>(0);
@@ -23,13 +20,14 @@ export default function SuccessPage() {
 
       // data.credits is the REAL server-side total for this user (idempotent —
       // safe even if this page loads twice or the request is retried).
-      setCredits(data.credits);
+      // The "Back to Companions" button below does a full page load, so the app
+      // fetches the fresh balance from the server when it starts.
       setFinalCredits(data.credits);
       setVerified(true);
     } catch (err: any) {
       setError(err.message || 'Failed to verify payment');
     }
-  }, [setCredits]);
+  }, []);
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
@@ -78,13 +76,13 @@ export default function SuccessPage() {
         >
           <h2 className="font-display font-medium text-xl text-red-400 mb-2">Payment Verification Failed</h2>
           <p className="text-zinc-400 mb-6">{error}</p>
-          <Link 
-            to="/" 
+          <a
+            href="/"
             className="inline-flex items-center gap-2 btn-ghost"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Home
-          </Link>
+          </a>
         </motion.div>
       </div>
     );
@@ -114,13 +112,13 @@ export default function SuccessPage() {
           <Crown className="w-5 h-5" />
           Current Credits: {finalCredits}
         </p>
-        <Link 
-          to="/" 
+        <a
+          href="/"
           className="inline-flex items-center gap-2 btn-premium"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Companions
-        </Link>
+        </a>
       </motion.div>
     </div>
   );
