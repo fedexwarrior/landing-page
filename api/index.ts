@@ -394,9 +394,11 @@ app.post(['/generate-image', '/api/generate-image'], async (req, res) => {
     // Values are already validated above; this just turns "one-piece" into "one piece", etc.
     const words = (v: string) => v.replace(/-/g, " ");
 
+    // Fashion-catalog framing should help more pictures pass fal's safety filter
+    const framing = "tasteful resort fashion editorial, waist-up portrait framing, relaxed natural pose";
     const styleDescriptor = style === "anime"
-      ? "anime illustration style, cel-shaded, vibrant anime art"
-      : "photorealistic CGI blend, magazine quality render, tasteful fashion editorial, realistic skin and lighting";
+      ? `anime illustration style, cel-shaded, vibrant anime art, ${framing}`
+      : `photorealistic CGI blend, magazine quality render, ${framing}, realistic skin and lighting`;
 
     const promptParts = [
       "attractive adult woman",
@@ -434,6 +436,25 @@ app.post(['/generate-image', '/api/generate-image'], async (req, res) => {
     const imageUrl = falData.images?.[0]?.url;
     // fal's safety filter swaps a flagged picture for a plain black image instead of failing
     const flaggedBySafetyFilter = falData.has_nsfw_concepts?.[0] === true;
+
+    // Keep simple counters so we can see which options get blocked most.
+    // In Upstash's Data Browser: "image_choice_totals" = every finished generation,
+    // "safety_blocks" = the blocked ones. Compare the numbers for each option.
+    if (imageUrl) {
+      const choiceKeys = [
+        `style:${style}`, `eyeColor:${eyeColor}`, `eyeShape:${eyeShape}`,
+        `bodyType:${bodyType}`, `outfit:${outfit}`, `setting:${setting}`,
+      ];
+      const bump = async (hash: string) => {
+        try {
+          await Promise.all(choiceKeys.map((k) => redis.hincrby(hash, k, 1)));
+        } catch (e) {
+          console.error("Could not update", hash);
+        }
+      };
+      await bump("image_choice_totals");
+      if (flaggedBySafetyFilter) await bump("safety_blocks");
+    }
 
     if (!imageUrl || flaggedBySafetyFilter) {
       await redis.incrby(`credits:${userId}`, COST_PER_IMAGE);
