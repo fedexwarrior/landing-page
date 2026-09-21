@@ -109,6 +109,7 @@ export default function ImageGeneration({ onBack, isSignedIn, credits, onRequire
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const currentStep = STEP_ORDER[currentStepIndex];
   const progress = (currentStepIndex / (STEP_ORDER.length - 1)) * 100;
@@ -152,6 +153,7 @@ export default function ImageGeneration({ onBack, isSignedIn, credits, onRequire
       return;
     }
 
+    setErrorMessage(null);
     setIsGenerating(true);
     try {
       const response = await fetch('/api/generate-image', {
@@ -166,18 +168,21 @@ export default function ImageGeneration({ onBack, isSignedIn, credits, onRequire
       }
 
       if (response.status === 402) {
-        // Out of credits
+        setErrorMessage('Not enough credits. Please top up to generate images.');
         return;
       }
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (data.imageUrl) {
         setGeneratedImage(data.imageUrl);
         if (typeof data.credits === 'number') onCreditsUpdate(data.credits);
         setShowResult(true);
+      } else {
+        setErrorMessage(data.error || 'Something went wrong. Please try again.');
       }
     } catch (err) {
       console.error('Generation failed', err);
+      setErrorMessage('Something went wrong. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -349,6 +354,7 @@ export default function ImageGeneration({ onBack, isSignedIn, credits, onRequire
                 onGenerate={handleGenerate}
                 onBack={goPrev}
                 canGenerate={isSignedIn && credits >= 30}
+                errorMessage={errorMessage}
               />
             )}
           </motion.div>
@@ -535,9 +541,10 @@ interface GenerateStepProps {
   onGenerate: () => void;
   onBack: () => void;
   canGenerate: boolean;
+  errorMessage: string | null;
 }
 
-function GenerateStep({ options, credits, isGenerating, onGenerate, onBack, canGenerate }: GenerateStepProps) {
+function GenerateStep({ options, credits, isGenerating, onGenerate, onBack, canGenerate, errorMessage }: GenerateStepProps) {
   return (
     <div className="space-y-6">
       <div className="text-center mb-4">
@@ -599,6 +606,10 @@ function GenerateStep({ options, credits, isGenerating, onGenerate, onBack, canG
             </>
           )}
         </button>
+
+        {errorMessage && (
+          <p className="text-center text-red-400 text-sm">{errorMessage}</p>
+        )}
 
         {!canGenerate && (
           <p className="text-center text-muted text-sm">

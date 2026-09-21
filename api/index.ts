@@ -396,7 +396,7 @@ app.post(['/generate-image', '/api/generate-image'], async (req, res) => {
 
     const styleDescriptor = style === "anime"
       ? "anime illustration style, cel-shaded, vibrant anime art"
-      : "photorealistic CGI blend, magazine quality render, realistic skin and lighting";
+      : "photorealistic CGI blend, magazine quality render, tasteful fashion editorial, realistic skin and lighting";
 
     const promptParts = [
       "attractive adult woman",
@@ -432,11 +432,17 @@ app.post(['/generate-image', '/api/generate-image'], async (req, res) => {
 
     const falData = await falResponse.json();
     const imageUrl = falData.images?.[0]?.url;
+    // fal's safety filter swaps a flagged picture for a plain black image instead of failing
+    const flaggedBySafetyFilter = falData.has_nsfw_concepts?.[0] === true;
 
-    if (!imageUrl) {
+    if (!imageUrl || flaggedBySafetyFilter) {
       await redis.incrby(`credits:${userId}`, COST_PER_IMAGE);
       charged = false;
-      return res.status(502).json({ error: "Image generation failed. Your credits were refunded." });
+      return res.status(flaggedBySafetyFilter ? 422 : 502).json({
+        error: flaggedBySafetyFilter
+          ? "That combination was blocked by the safety filter. Your credits were refunded. Try a different outfit or setting."
+          : "Image generation failed. Your credits were refunded.",
+      });
     }
 
     charged = false; // success, nothing to refund
