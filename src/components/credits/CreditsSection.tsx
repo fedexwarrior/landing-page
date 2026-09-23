@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Crown, ArrowLeft, Shield, CreditCard } from 'lucide-react';
+import { Crown, ArrowLeft, Shield, CreditCard, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useCredits } from '@/hooks/useCredits';
 

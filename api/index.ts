@@ -43,9 +43,9 @@ const CREDIT_PACKAGES = [
 const ALLOWED_IMAGE_OPTIONS: Record<string, string[]> = {
   eyeColor: ['blue', 'green', 'brown', 'hazel', 'violet', 'amber', 'gray', 'heterochromia'],
   eyeShape: ['almond', 'round', 'hooded', 'upturned', 'downturned', 'monolid'],
-  bodyType: ['slim', 'athletic', 'curvy', 'petite', 'tall', 'voluptuous'],
+  bodyType: ['slim', 'athletic', 'petite', 'tall'],
   outfit: ['bikini', 'one-piece', 'sundress', 'cover-up', 'shorts-tank', 'sarong'],
-  setting: ['beach', 'poolside', 'indoor', 'sunset', 'tropical-garden', 'luxury-resort'],
+  setting: ['beach', 'poolside', 'sunset', 'tropical-garden', 'luxury-resort'],
 };
 
 function getClientIp(req: express.Request): string {
@@ -411,31 +411,44 @@ app.post(['/generate-image', '/api/generate-image'], async (req, res) => {
     ].join(", ");
 
     // --- Call fal.ai to actually generate the image ---
-    const falResponse = await fetch("https://fal.run/fal-ai/flux/dev", {
-      method: "POST",
-      headers: {
-        "Authorization": `Key ${process.env.FAL_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prompt: promptParts,
-        image_size: "portrait_4_3",
-        num_images: 1,
-      }),
-    });
+    // The model uses a random seed each call, so a picture that gets flagged once
+    // can come out fine on a second try with the exact same prompt. We attempt
+    // up to 2 times before refunding, so a person's chosen options rarely fail
+    // just because of one unlucky render.
+    const MAX_ATTEMPTS = 2;
+    let falData: any = null;
+    let flaggedBySafetyFilter = false;
+    let imageUrl: string | undefined;
 
-    if (!falResponse.ok) {
-      await redis.incrby(`credits:${userId}`, COST_PER_IMAGE);
-      charged = false;
-      const errText = await falResponse.text();
-      console.error("fal.ai error:", errText);
-      return res.status(502).json({ error: "Image generation failed. Your credits were refunded." });
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const falResponse = await fetch("https://fal.run/fal-ai/flux/dev", {
+        method: "POST",
+        headers: {
+          "Authorization": `Key ${process.env.FAL_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: promptParts,
+          image_size: "portrait_4_3",
+          num_images: 1,
+        }),
+      });
+
+      if (!falResponse.ok) {
+        await redis.incrby(`credits:${userId}`, COST_PER_IMAGE);
+        charged = false;
+        const errText = await falResponse.text();
+        console.error("fal.ai error:", errText);
+        return res.status(502).json({ error: "Image generation failed. Your credits were refunded." });
+      }
+
+      falData = await falResponse.json();
+      imageUrl = falData.images?.[0]?.url;
+      // fal's safety filter swaps a flagged picture for a plain black image instead of failing
+      flaggedBySafetyFilter = falData.has_nsfw_concepts?.[0] === true;
+
+      if (imageUrl && !flaggedBySafetyFilter) break; // success, stop retrying
     }
-
-    const falData = await falResponse.json();
-    const imageUrl = falData.images?.[0]?.url;
-    // fal's safety filter swaps a flagged picture for a plain black image instead of failing
-    const flaggedBySafetyFilter = falData.has_nsfw_concepts?.[0] === true;
 
     // Keep simple counters so we can see which options get blocked most.
     // In Upstash's Data Browser: "image_choice_totals" = every finished generation,

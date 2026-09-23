@@ -161,6 +161,23 @@ function MainApp() {
       <AnimatePresence mode="wait">
         {currentView === 'hero' && (
           <motion.div key="hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            {/* Sign in / account status — only shown on the home screen */}
+            <div className="fixed top-4 right-4 z-40">
+              {user ? (
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full glass-medium border border-panel-border text-sm text-white">
+                  <Crown className="w-4 h-4 text-velvet" />
+                  {user.credits.toLocaleString()} credits
+                </div>
+              ) : (
+                <button
+                  onClick={() => requireAuth("Sign in to claim your free credits and start chatting.", () => {})}
+                  className="btn-velvet-pill px-5 py-2 text-sm"
+                >
+                  Sign In
+                </button>
+              )}
+            </div>
+
             <HeroScreen onCharacterSelect={handleCharacterSelect} />
             {/* Bottom Navigation */}
             <nav className="fixed bottom-0 left-0 right-0 z-40 bg-midnight/90 backdrop-blur-md border-t border-panel-border px-4 py-2">
