@@ -55,12 +55,9 @@ const OPTIONS: Record<Exclude<GenerationStep, 'style' | 'generate'>, { value: st
   ],
   bodyType: [
     { value: 'slim', label: 'Slim' },
-    { value: 'athletic', label: 'Athletic' },
-    { value: 'petite', label: 'Petite' },
     { value: 'tall', label: 'Tall' },
   ],
   outfit: [
-    { value: 'bikini', label: 'Bikini' },
     { value: 'one-piece', label: 'One-Piece' },
     { value: 'sundress', label: 'Sundress' },
     { value: 'cover-up', label: 'Cover-Up' },
@@ -524,8 +521,8 @@ function getOptionEmoji(value: string): string {
   const emojiMap: Record<string, string> = {
     blue: '🔵', green: '🟢', brown: '🟤', hazel: '🟠', violet: '🟣', amber: '🟡', gray: '⚪', heterochromia: '👁️',
     almond: '👁️', round: '🔵', hooded: '👁️', upturned: '⬆️', downturned: '⬇️', monolid: '👁️',
-    slim: '📏', athletic: '💪', petite: '📐', tall: '📏',
-    bikini: '👙', 'one-piece': '🩱', sundress: '👗', 'cover-up': '👘', 'shorts-tank': '🩳', sarong: '👘',
+    slim: '📏', tall: '📏',
+    'one-piece': '🩱', sundress: '👗', 'cover-up': '👘', 'shorts-tank': '🩳', sarong: '👘',
     beach: '🏖️', poolside: '🏊', sunset: '🌅', 'tropical-garden': '🌴', 'luxury-resort': '🏨',
   };
   return emojiMap[value] || '✨';

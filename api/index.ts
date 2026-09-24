@@ -43,8 +43,8 @@ const CREDIT_PACKAGES = [
 const ALLOWED_IMAGE_OPTIONS: Record<string, string[]> = {
   eyeColor: ['blue', 'green', 'brown', 'hazel', 'violet', 'amber', 'gray', 'heterochromia'],
   eyeShape: ['almond', 'round', 'hooded', 'upturned', 'downturned', 'monolid'],
-  bodyType: ['slim', 'athletic', 'petite', 'tall'],
-  outfit: ['bikini', 'one-piece', 'sundress', 'cover-up', 'shorts-tank', 'sarong'],
+  bodyType: ['slim', 'tall'],
+  outfit: ['one-piece', 'sundress', 'cover-up', 'shorts-tank', 'sarong'],
   setting: ['beach', 'poolside', 'sunset', 'tropical-garden', 'luxury-resort'],
 };
 
