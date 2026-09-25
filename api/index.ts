@@ -176,12 +176,17 @@ app.post(['/auth/logout', '/api/auth/logout'], async (req, res) => {
 // --- CHAT: requires a real session. Never touches OpenRouter for a signed-out visitor. ---
 
 app.post(['/chat', '/api/chat'], async (req, res) => {
+  // Declared out here (outside the try) so the catch block can see them — same
+  // charged/refund pattern used for image generation.
+  let userId: string | null = null;
+  let charged = false;
+
   try {
     const ip = getClientIp(req);
     const { success } = await chatRateLimit.limit(ip);
     if (!success) return res.status(429).json({ error: "Too many requests. Please slow down and try again in a minute." });
 
-    const userId = await getUserIdFromSession(req);
+    userId = await getUserIdFromSession(req);
     if (!userId) {
       return res.status(401).json({ error: "Please sign in to chat." });
     }
@@ -209,6 +214,7 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
       await redis.incrby(`credits:${userId}`, COST_PER_MESSAGE);
       return res.status(402).json({ error: "Not enough credits. Please top up to keep chatting." });
     }
+    charged = true; // credits are now taken; refund them if anything goes wrong below
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -222,14 +228,30 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
       }),
     });
 
-    const data = await response.json();
-    const replyText = data.choices?.[0]?.message?.content || "No response";
+    if (!response.ok) {
+      await redis.incrby(`credits:${userId}`, COST_PER_MESSAGE);
+      charged = false;
+      const errText = await response.text();
+      console.error("OpenRouter error:", errText);
+      return res.status(502).json({ error: "Something went wrong. Your credits were refunded. Please try again." });
+    }
 
+    const data = await response.json();
+    const replyText = data.choices?.[0]?.message?.content;
+
+    if (!replyText) {
+      await redis.incrby(`credits:${userId}`, COST_PER_MESSAGE);
+      charged = false;
+      return res.status(502).json({ error: "Something went wrong. Your credits were refunded. Please try again." });
+    }
+
+    charged = false; // success, nothing to refund
     res.json({ message: replyText, credits: newBalance });
   } catch (error) {
     const err = error as Error;
     console.error("Chat error:", err.message);
-    res.status(500).json({ error: "Something went wrong. Please try again." });
+    if (charged && userId) await redis.incrby(`credits:${userId}`, COST_PER_MESSAGE);
+    res.status(500).json({ error: "Something went wrong. Your credits were refunded. Please try again." });
   }
 });
 

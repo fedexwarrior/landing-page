@@ -42,10 +42,13 @@ export default function ChatInterface({ character, onBack, isSignedIn, credits, 
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  const sendToServer = async (userText: string) => {
-    const userMsg: Message = { id: `user-${Date.now()}`, sender: 'user', text: userText, timestamp: new Date() };
-    setMessages((prev) => [...prev, userMsg]);
+  // Adds the person's own message bubble. Kept separate from sendToServer so a
+  // 401 retry (session expired mid-chat) doesn't add the same bubble twice.
+  const addUserMessage = (text: string) => {
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, sender: 'user', text, timestamp: new Date() }]);
+  };
 
+  const sendToServer = async (userText: string) => {
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -64,15 +67,21 @@ export default function ChatInterface({ character, onBack, isSignedIn, credits, 
         return;
       }
 
+      if (!response.ok) {
+        setMessages((prev) => [...prev, { id: `char-${Date.now()}`, sender: 'character', text: "Something went wrong on my end. Please try sending that again.", timestamp: new Date() }]);
+        return;
+      }
+
       const data = await response.json();
       if (data.message) {
         setMessages((prev) => [...prev, { id: `char-${Date.now()}`, sender: 'character', text: data.message, timestamp: new Date() }]);
         if (typeof data.credits === 'number') onCreditsUpdate(data.credits);
       } else {
-        setMessages((prev) => [...prev, { id: `char-${Date.now()}`, sender: 'character', text: "...", timestamp: new Date() }]);
+        setMessages((prev) => [...prev, { id: `char-${Date.now()}`, sender: 'character', text: "Something went wrong on my end. Please try sending that again.", timestamp: new Date() }]);
       }
     } catch (err) {
       console.error('Failed to get response', err);
+      setMessages((prev) => [...prev, { id: `char-${Date.now()}`, sender: 'character', text: "Connection issue — please try sending that again.", timestamp: new Date() }]);
     }
   };
 
@@ -82,11 +91,16 @@ export default function ChatInterface({ character, onBack, isSignedIn, credits, 
     if (!userText) return;
 
     if (!isSignedIn) {
-      onRequireAuth("Sign in to start chatting — you'll get 20 free credits.", () => sendToServer(userText));
+      onRequireAuth("Sign in to start chatting — you'll get 20 free credits.", () => {
+        setInputMessage('');
+        addUserMessage(userText);
+        sendToServer(userText);
+      });
       return;
     }
 
     setInputMessage('');
+    addUserMessage(userText);
     sendToServer(userText);
   };
 

@@ -46,9 +46,12 @@ export function useCredits(): UseCreditsReturn {
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create checkout session');
       }
-      if (data.url) {
-        window.location.href = data.url;
+      if (!data.url) {
+        // Shouldn't happen given how the server builds this response, but if it
+        // ever does, fail loudly instead of leaving the spinner with nowhere to go.
+        throw new Error('Could not start checkout. Please try again.');
       }
+      window.location.href = data.url;
     } catch (error: any) {
       console.error('Checkout error:', error);
       alert(`Failed to start checkout: ${error.message}`);
