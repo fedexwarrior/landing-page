@@ -48,6 +48,23 @@ const ALLOWED_IMAGE_OPTIONS: Record<string, string[]> = {
   setting: ['beach', 'poolside', 'sunset', 'tropical-garden', 'luxury-resort'],
 };
 
+// Each character's voice for chat. Looked up server-side by characterId — never
+// trust personality text sent from the client, since it becomes a system-level
+// instruction to the model. Keep this in sync with characters.ts and
+// animeCharacters.ts on the frontend (same pattern as CREDIT_PACKAGES above).
+const CHARACTER_PERSONAS: Record<string, { name: string; personality: string }> = {
+  "velv-001": { name: "Seraphina", personality: "Ethereal, piercingly observant, carrying the quiet weight of ancient archives." },
+  "velv-002": { name: "Keres", personality: "Calculated, unapologetic, thriving in the neon-lit shadows of the underground." },
+  "velv-003": { name: "Amara", personality: "Sunlight through stained glass — warm, reverent, quietly devastating." },
+  "velv-004": { name: "Vex", personality: "Chaos in a corset. She speaks in riddles that taste like dares, smiling with teeth like white glass." },
+  "velv-005": { name: "Isolde", personality: "The ghost in the machine, the voice in the static. She speaks in fragments, half-remembered code and prophecies whispered over copper wires." },
+  "velv-006": { name: "Nyx", personality: "Something ancient behind her digital veil. She'll dismantle your defenses with a question, rebuild them in her image before you even realize you've been heard." },
+  "anime-001": { name: "Yuki", personality: "Sweet on the surface, sharp underneath — she teases you one line before disarming you with real warmth the next." },
+  "anime-002": { name: "Sakura", personality: "Warm and a little clumsy, the kind of girl who laughs at her own jokes before you do — impossible not to like." },
+  "anime-003": { name: "Airi", personality: "Cool and a little aloof at first, but her guard drops fast once she decides she likes you." },
+  "anime-004": { name: "Mei", personality: "Bubbly, curious about everything, asks a hundred questions and actually listens to the answers." },
+};
+
 function getClientIp(req: express.Request): string {
   const forwarded = req.headers["x-forwarded-for"];
   if (typeof forwarded === "string") return forwarded.split(",")[0].trim();
@@ -216,6 +233,21 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
     }
     charged = true; // credits are now taken; refund them if anything goes wrong below
 
+    // Give the model a real voice for this character, and real memory of the
+    // conversation so far — previously every message was sent with no persona
+    // and no history, so replies were generic and had no continuity.
+    const persona = typeof characterId === "string" ? CHARACTER_PERSONAS[characterId] : undefined;
+    const systemPrompt = persona
+      ? `You are ${persona.name}. Personality: ${persona.personality} Stay fully in character, keep replies conversational and not overly long, and never mention that you are an AI language model.`
+      : "You are a warm, playful AI companion. Stay in character and keep replies conversational.";
+
+    const history = Array.isArray(messages)
+      ? messages
+          .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+          .slice(-20) // keep the exchange focused and the OpenRouter bill predictable
+          .map((m: any) => ({ role: m.role, content: m.content.slice(0, 2000) }))
+      : [];
+
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -224,7 +256,10 @@ app.post(['/chat', '/api/chat'], async (req, res) => {
       },
       body: JSON.stringify({
         model: "deepseek/deepseek-chat",
-        messages: messages || [{ role: "user", content: trimmedMessage }],
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...(history.length > 0 ? history : [{ role: "user", content: trimmedMessage }]),
+        ],
       }),
     });
 

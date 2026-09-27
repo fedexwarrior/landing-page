@@ -48,16 +48,22 @@ export default function ChatInterface({ character, onBack, isSignedIn, credits, 
     setMessages((prev) => [...prev, { id: `user-${Date.now()}`, sender: 'user', text, timestamp: new Date() }]);
   };
 
-  const sendToServer = async (userText: string) => {
+  const sendToServer = async (userText: string, priorTurns: { role: 'user' | 'assistant'; content: string }[]) => {
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText, characterId: character?.id }),
+        body: JSON.stringify({
+          message: userText,
+          characterId: character?.id,
+          // Real conversation history — lets the character actually remember
+          // what was said earlier instead of answering each message in isolation.
+          messages: [...priorTurns, { role: 'user', content: userText }],
+        }),
       });
 
       if (response.status === 401) {
-        onRequireAuth("Please sign in again to keep chatting.", () => sendToServer(userText));
+        onRequireAuth("Please sign in again to keep chatting.", () => sendToServer(userText, priorTurns));
         return;
       }
 
@@ -90,18 +96,23 @@ export default function ChatInterface({ character, onBack, isSignedIn, credits, 
     const userText = inputMessage.trim();
     if (!userText) return;
 
+    // Snapshot the conversation so far (before this new turn) to send as context.
+    const priorTurns = messages
+      .filter((m) => m.sender === 'user' || m.sender === 'character')
+      .map((m) => ({ role: (m.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.text }));
+
     if (!isSignedIn) {
       onRequireAuth("Sign in to start chatting — you'll get 20 free credits.", () => {
         setInputMessage('');
         addUserMessage(userText);
-        sendToServer(userText);
+        sendToServer(userText, priorTurns);
       });
       return;
     }
 
     setInputMessage('');
     addUserMessage(userText);
-    sendToServer(userText);
+    sendToServer(userText, priorTurns);
   };
 
   const formatTime = (date: Date) => {
