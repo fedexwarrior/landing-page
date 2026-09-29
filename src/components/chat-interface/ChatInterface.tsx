@@ -183,6 +183,11 @@ export default function ChatInterface({ character, onBack, isSignedIn, credits, 
         </div>
       </header>
 
+      {/* AI disclosure — companion-chatbot laws want this visible in the product itself, not only in the Terms */}
+      <p className="text-[11px] text-center text-muted py-1.5 px-4 border-b border-panel-border/50 bg-midnight/40">
+        {character.name} is an AI companion, not a real person.
+      </p>
+
       {/* Chat Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 mask-gradient-bottom mask-gradient-top">
         <AnimatePresence mode="popLayout">

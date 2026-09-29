@@ -49,7 +49,11 @@ export function SignUpModal({ onClose, onSignedIn, reason }: SignUpModalProps) {
         <GoogleSignInButton onSignedIn={onSignedIn} />
 
         <p className="text-xs text-zinc-500 text-center mt-6">
-          By signing in you agree this is a fictional AI companion experience.
+          By signing in you confirm you are 18 or older and agree to our{' '}
+          <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-300">Terms</a>
+          {' '}and{' '}
+          <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-300">Privacy Policy</a>.
+          {' '}This is a fictional AI companion experience.
         </p>
       </motion.div>
     </motion.div>
